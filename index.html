@@ -2,136 +2,35 @@
 <head>
     <!-- aframe itself -->
     <script src="https://aframe.io/releases/0.8.2/aframe.min.js"></script>
-    <!-- physics and other extras -->
-<!--     <script src="//cdn.rawgit.com/donmccurdy/aframe-extras/v3.13.1/dist/aframe-extras.min.js"></script>
-
- -->
-    <script src="//cdn.rawgit.com/donmccurdy/aframe-physics-system/v3.3.0/dist/aframe-physics-system.min.js"></script>
-
+    <script src="//cdn.rawgit.com/donmccurdy/aframe-extras/v5.1.0/dist/aframe-extras.min.js"></script>
+    <script src="//cdn.rawgit.com/donmccurdy/aframe-physics-system/v4.0.0/dist/aframe-physics-system.min.js"></script>
     <script src="./dist/aframe-super-shooter-kit.min.js"></script>
+
     <script>
         $ = (sel) => document.querySelector(sel)
         $$ = (sel) => document.querySelectorAll(sel)
         on = (elem, type, hand) => elem.addEventListener(type,hand)
     </script>
-    <!-- alternate random number generator -->
+
     <script src="js/random.js"></script>
-    <!-- our `distribute` component -->
+    <script src="js/gameManager.js"></script>
+    <script src="js/enemy.js"></script>
+
     <script>
-        var GameManagerUtils = (function(){
-            var score = 0;
-            return{
-                addScore: function(){
-                    score+=1;
-                },
-                getScore: function(){
-                    return score;
-                },
-                generateRandomNumber: function (min, max) {
-                return Math.floor(Math.random() * max + min);
-                },
-                createEnemy: function () {
-                    var newEnemy = document.createElement('a-entity');
-                    newEnemy.setAttribute('gltf-model', '#imp');
-                    newEnemy.setAttribute('position', '0 0 -5');
-                    newEnemy.setAttribute('dynamic-body', 'shape:auto; mass:5');
-                    newEnemy.setAttribute('id', 'enemy');
-                    newEnemy.setAttribute('sound', 'src: url(./audio/gah.mp3); autoplay: false; loop: false;');
-                    newEnemy.setAttribute('target', 'healthPoints: 1; static: false');
-                    newEnemy.setAttribute('enemy', '')
-                    return newEnemy;
-                  }
-            }
-        })()
-        AFRAME.registerComponent('game-manager', {
-          init: function () {
-            var sceneEl = this.el;
-            var enemy = GameManagerUtils.createEnemy();
-            sceneEl.addEventListener('loaded', function () {
-              sceneEl.appendChild(enemy);
-            });
-            sceneEl.addEventListener('targetDestroyed', function(e) {
-                console.log("targetDestroyed")
-                setTimeout(
-                    ()=>{this.appendChild(GameManagerUtils.createEnemy())}, 
-                    GameManagerUtils.generateRandomNumber(3000, 6000));
-            });
-          }
-        });
         /**
-         * Press S to shoot.
+         * Press Space to shoot.
          */
         AFRAME.registerComponent('click-to-shoot', {
-          init: function () {
+        init: function () {
             document.body.addEventListener('keydown', (e) => { 
-                if(e.keyCode == 83)
+                if(e.keyCode == 32){
                     this.el.emit('shoot'); 
+                    $("#shooter").components.sound.playSound();
+                }
             });
-          }
+        }
         });
-        /**
-         * Enemy
-         */
-        AFRAME.registerComponent('enemy', {
-
-            init: function () {
-                this.el.addEventListener('die', this.die.bind(this));
-                this.el.addEventListener('body-loaded', this.jumpAndRun.bind(this))
-                this.v_x = GameManagerUtils.generateRandomNumber(-GameManagerUtils.getScore()-1, GameManagerUtils.getScore()+1)
-                this.v_y = 0;
-                this.v_z = GameManagerUtils.generateRandomNumber(-GameManagerUtils.getScore()-1, GameManagerUtils.getScore()+1)
-            },
-            jumpAndRun: function(){
-                this.jump();
-                setTimeout(()=>{this.run()}, 2000)
-            },
-            die:function(){
-                console.log("die")
-
-                this.jump();
-                this.hide();
-                this.el.emit("targetDestroyed")
-                // Add 1 to Score
-                GameManagerUtils.addScore();
-                $("#score").setAttribute('text','value','Score '+GameManagerUtils.getScore())
-
-            },
-            /*
-            ** Jump Animation
-            */
-            jump: function(){
-                console.log("jump")
-                this.el.setAttribute('dynamic-body', 'mass:5')
-                
-                var force = new CANNON.Vec3(this.v_x, 20, this.v_z)
-                var local = new CANNON.Vec3(0,0,0)
-                this.el.body.applyLocalImpulse(force, local);
-                
-                // Play sound
-                $("#enemy").components.sound.playSound();
-            },
-            hide: function(){
-                console.log('hide')
-                this.el.object3D.position.set(0, 0, -4);
-                this.el.setAttribute('velocity', '0 0 0')
-                this.el.components['dynamic-body'].syncToPhysics()
-                this.el.setAttribute('dynamic-body', 'mass:5')
-
-                setTimeout(() => {
-                  this.jumpAndRun();
-                }, GameManagerUtils.generateRandomNumber(3000, 6000));
-
-            },
-            run: function(){
-                console.log("run")
-                
-                var velocity = this.v_x+' '+this.v_y+' '+this.v_z;
-                this.el.setAttribute('dynamic-body', 'mass:0')
-                this.el.setAttribute('velocity', velocity)
-                console.log($("#enemy").getAttribute('velocity'))
-            }
-
-        });
+        // Stone
         AFRAME.registerComponent('distribute', {
             schema: {
                 src: {type:'string'},
@@ -168,8 +67,9 @@
 <body>
 <a-scene
         physics="debug:false;"
-        sound="src: url(./audio/octobernight2.mp3); loop:true; autoplay:true; volume:0.5;"
+        sound="src: url(./audio/clocktowerost.mp3); loop: true; autoplay:true; volume:0.5;"
         game-manager
+        inspector="url: http://localhost:3333/dist/aframe-inspector.js"
 >
     <a-assets>
         <a-asset-item id="imp" src="models/imp/scene.gltf"></a-asset-item>
@@ -178,49 +78,151 @@
         <a-asset-item id="moon" src="models/moon/scene.gltf"></a-asset-item>
         <a-asset-item id="cauldron" src="models/cauldron/scene.gltf"></a-asset-item>
         <a-asset-item id="rock1" src="models/rock1/scene.gltf"></a-asset-item>
+        <a-asset-item id="sheep" src="models/sheep/scene.gltf"></a-asset-item>
     </a-assets>
 
+    <!-- the ground --->
+    <a-plane color="#52430e"
+    static-body
+    id="ground"
+    rotation="-90 0 0" width="100" height="100"  shadow="receive:true"></a-plane>
+    <a-entity geometry="primitive:plane; width:90; height:90;" position="0 0 -4" rotation="90 0 0" nav-mesh></a-entity>
+    <!-- Walls -->
+    <a-plane material="src: url(models/wall.jpg); repeat: 5 2" static-body id="west-wall" position="-50 25 0" rotation="0 90 0" shadow="receive:true" width="100" height="50"></a-plane>
+    <a-plane material="src: url(models/wall.jpg); repeat: 5 2" static-body id="east-wall" position="50 25 0" rotation="0 -90 0" shadow="receive:true" width="100" height="50"></a-plane>
+    <a-plane material="src: url(models/wall.jpg); repeat: 5 2" static-body id="north-wall" position="0 25 50" rotation="0 180 0" shadow="receive:true" width="100" height="50"></a-plane>
+    <a-plane material="src: url(models/wall.jpg); repeat: 5 2" static-body id="south-wall" position="0 25 -50" rotation="0 0 0" shadow="receive:true" width="100" height="50"></a-plane>
+
+
+    <!-- enemy -->
+    <a-entity class='enemy-hole'
+        position="0 0 -4">
+        <a-entity class='enemy' gltf-model="#imp" 
+                dynamic-body="shape:cylinder"
+                sound="src: url(./audio/gah.mp3); autoplay: false; loop: false;" 
+                target="healthPoints: 1; static: false"
+                position='0 -1 0'
+                enemy></a-entity>
+    </a-entity>
+
+    <a-entity class='enemy-hole'
+        position="10 0 -10">
+        <a-entity class='enemy' gltf-model="#imp" 
+                dynamic-body="shape:cylinder"
+                sound="src: url(./audio/gah.mp3); autoplay: false; loop: false;" 
+                target="healthPoints: 1; static: false"
+                position='0 -1 0'
+                enemy></a-entity>
+    </a-entity>
+
+    <a-entity class='enemy-hole'
+        position="-10 0 -10">
+        <a-entity class='enemy' gltf-model="#imp" 
+                dynamic-body="shape:cylinder"
+                sound="src: url(./audio/gah.mp3); autoplay: false; loop: false;" 
+                target="healthPoints: 1; static: false"
+                position='0 -1 0'
+                enemy></a-entity>
+    </a-entity>
+
+    <a-entity class='enemy-hole'
+        position="40 0 -40">
+        <a-entity class='enemy' gltf-model="#imp" 
+                dynamic-body="shape:cylinder"
+                sound="src: url(./audio/gah.mp3); autoplay: false; loop: false;" 
+                target="healthPoints: 1; static: false"
+                position='0 -1 0'
+                enemy></a-entity>
+    </a-entity>
+
+    <a-entity class='enemy-hole'
+        position="-40 0 -40">
+        <a-entity class='enemy' gltf-model="#imp" 
+                dynamic-body="shape:cylinder"
+                sound="src: url(./audio/gah.mp3); autoplay: false; loop: false;" 
+                target="healthPoints: 1; static: false"
+                position='0 -1 0'
+                enemy></a-entity>
+    </a-entity>
+
+    <a-entity class='enemy-hole'
+        position="-40 0 40">
+        <a-entity class='enemy' gltf-model="#imp" 
+                dynamic-body="shape:cylinder"
+                sound="src: url(./audio/gah.mp3); autoplay: false; loop: false;" 
+                target="healthPoints: 1; static: false"
+                position='0 -1 0'
+                enemy></a-entity>
+    </a-entity>
+
+    <a-entity class='enemy-hole'
+        position="40 0 40">
+        <a-entity class='enemy' gltf-model="#imp" 
+                dynamic-body="shape:cylinder"
+                sound="src: url(./audio/gah.mp3); autoplay: false; loop: false;" 
+                target="healthPoints: 1; static: false"
+                position='0 -1 0'
+                enemy></a-entity>
+    </a-entity>
+    <!-- bullet -->
     <a-entity id="bulletTemplate" bullet geometry="primitive: sphere; radius: 0.1" material="color: orange"></a-entity>
 
-    <a-entity camera look-controls position="0 1.5 0" shooter click-to-shoot>
-        <a-text id="score" value="Score" position="-1 -0.6 -1" color="white" width="3" anchor="left"></a-text>
+    <!-- Sheep
+    <a-entity class="sheep" gltf-model="#sheep" position="0 0 -5" scale="0.05 0.05 0.05" animation-mixer></a-entity> -->
+
+    <!-- Camera & shooter -->
+    <a-entity id="shooter" movement-controls="constrainToNavMesh: true"
+    sound="src: url(./audio/shoot.mp3); loop: false; autoplay: false; volume:1;"
+    >
+    <a-entity camera shooter click-to-shoot
+    look-controls 
+    position="0 1.6 0"
+>
+        <!-- Score -->
+        <a-text id="score" value="Score" position="-1 -0.6 -1" color="grey" width="3" anchor="left"></a-text>
+        <!-- Life -->
+        <a-text id="life" value="Life" position="0.5 -0.6 -1" color="grey" width="3" anchor="left"></a-text>
+        <!-- Timer -->
+        <a-text id="time" value="60" position="0 -0.6 -1" color="grey" anchor="center" width=3 text="align: center"></a-text>
+
+        <a-text id="game-over" value="Game Over" position="-0.3 0.5 -1" color="white" width="3" visible="false"></a-text>
+
         <a-entity cursor="fuse: true; fuseTimeout: 500"
             position="0 0 -1"
             geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
             material="color: red; shader: flat">
         </a-entity>
+
+        <!-- <a-entity color="green" id="avatar" body="type: dynamic; mass: 5; shape: auto;"
+        geometry="primitive: box; width: 1; height: 1; depth: 1"
+        > -->
+
+        </a-entity>
     </a-entity>
-    
-
-<!--     <a-entity id='enemy' gltf-model="#imp"
-                  position="0 0 -4"
-                  dynamic-body="shape:auto"
-                  sound="src: url(./audio/gah.mp3); autoplay: false; loop: false;" 
-                  target="healthPoints: 1; static: false"
-                  enemy></a-entity> -->
-
-    <!-- the ground --->
-    <a-plane color="#52430e"
-             static-body
-             rotation="-90 0 0" width="100" height="100"  shadow="receive:true"></a-plane>
 
 
     <!-- cauldron -->
-    <a-entity  position="1.5 0 -3.5" gltf-model="#cauldron"
+    <a-entity  position="1.5 0 4.3375" gltf-model="#cauldron" id="pot1"
                sound="src: url(./audio/boilingwater-loop.mp3); autoplay: true; loop:true;"
+               animation-mixer></a-entity>
+    <a-entity  position="7 0 -5" gltf-model="#cauldron" id="pot2"
+    animation-mixer></a-entity>
+    <a-entity  position="-2 0 -4" gltf-model="#cauldron" id="pot3"
                animation-mixer></a-entity>
 
     <!-- the moon -->
-    <a-entity gltf-model="#moon"></a-entity>
+    <a-entity gltf-model="#moon" position="0 200 30"></a-entity>
 
     <!-- trees -->
-    <a-entity gltf-model="#tree2" position="38 8.5 -10"></a-entity>
-    <a-entity gltf-model="#tree1" position="33 5.5 -10"></a-entity>
-    <a-entity gltf-model="#tree1" position="33 5.5 -30"></a-entity>
+    <a-entity gltf-model="#tree2" position="38 8.5 -10" ></a-entity>
+    <a-entity gltf-model="#tree1" position="40 5.5 -20" ></a-entity>
+    <a-entity gltf-model="#tree2" position="50 5.5 -50" ></a-entity>
+    <a-entity gltf-model="#tree1" position="0 5.5 -30" ></a-entity>
+    <a-entity gltf-model="#tree2" position="0 5.5 30" ></a-entity>
+    <a-entity gltf-model="#tree1" position="80 5.5 30" ></a-entity>
 
     <!-- rocks -->
-    <a-entity distribute="jitter: 2 0.5 2; modelCenter: 59 -0.8 32; src:#rock1; radius:3"></a-entity>
-
+    <a-entity distribute="jitter: 45 0.5 45; modelCenter: 59 -0.8 40; src:#rock1; radius:3" static-body="shape:auto"></a-entity>
 
     <!-- background sky -->
     <a-sky color="#270d2c"></a-sky>
@@ -234,14 +236,8 @@
 
 
 </a-scene>
-<!-- <script type="text/javascript">
-    var el = document.querySelector('#box');
-    console.log(el)
-    el.body.applyImpulse(
-      /* impulse */        new CANNON.Vec3(0, 1, -1),
-      /* world position */ new CANNON.Vec3().copy(el.getComputedAttribute('position'))
-    );
-</script> -->
+</div>
+<script src="../dist/aframe-inspector.js"></script>
 </body>
 </html>
 
